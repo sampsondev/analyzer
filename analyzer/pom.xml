@@ -4,8 +4,8 @@
 	<modelVersion>4.0.0</modelVersion>
 	<parent>
 		<groupId>com.practice</groupId>
-		<version>1.0-SNAPSHOT</version>
-		<artifactId>DogWalk</artifactId>
+		<version>0.0.1-SNAPSHOT</version>
+		<artifactId>dogwalk</artifactId>
 	</parent>
 	<groupId>com.practice</groupId>
 	<artifactId>analyzer</artifactId>
@@ -28,6 +28,7 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
+			<version>2.2.6.RELEASE</version>
 			<scope>test</scope>
 			<exclusions>
 				<exclusion>
