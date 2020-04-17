@@ -55,9 +55,8 @@ public class RunnableTask implements Runnable{
                         .filter(c -> c.contains("rain"))
                         .findFirst().orElse("walk the dog");
                 logger.info("temp is " + weatherDay.getCurrent().getTemperature());
-                String queueURL = System.getenv("queueURL");
                 SendMessageRequest msg_request = new SendMessageRequest()
-                        .withQueueUrl(queueURL)
+                        .withQueueUrl(System.getenv("queueURL"))
                         .withMessageBody(new Gson().toJson(today));
                 sqs.sendMessage(msg_request);
             }

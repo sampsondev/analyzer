@@ -43,11 +43,9 @@ public class DatabaseService {
                 .withEndpointConfiguration(
                         new AwsClientBuilder.EndpointConfiguration(System.getenv("dynamoURL"), "us-east-1")
                 ).build();
-        ListTablesResult result = client.listTables();
         try {
             while(true) {
-                String queueUrl = System.getenv("queueURL");
-                List<Message> messages = sqs.receiveMessage(queueUrl).getMessages();
+                List<Message> messages = sqs.receiveMessage(System.getenv("queueURL")).getMessages();
                 if(messages!=null && !messages.isEmpty()){
                     messages.stream()
                             .forEach(m ->{
