@@ -1,34 +1,73 @@
 package com.practice.walks.service;
 
+import com.amazonaws.auth.AWSCredentials;
+import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.client.builder.AwsClientBuilder;
+import com.amazonaws.services.dynamodbv2.datamodeling.DynamoDB;
+import com.amazonaws.services.dynamodbv2.model.AttributeValue;
+import com.amazonaws.services.dynamodbv2.model.ListTablesResult;
 import com.amazonaws.services.sqs.AmazonSQS;
 import com.amazonaws.services.sqs.AmazonSQSClientBuilder;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDB;
+import com.amazonaws.services.dynamodbv2.AmazonDynamoDBClientBuilder;
 import com.amazonaws.services.sqs.model.Message;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import com.google.gson.Gson;
 
+import java.util.HashMap;
 import java.util.List;
 
 @Service
 public class DatabaseService {
-    private final AmazonSQS sqs;
+    private  AmazonSQS sqs;
+    private  AmazonDynamoDB client;
+    private static final Logger logger = LoggerFactory.getLogger(DatabaseService.class);
 
-    public DatabaseService() {
-        sqs = AmazonSQSClientBuilder.defaultClient();
+    @Value("${aws.queueKey}")
+    private String queueKey;
 
-    }
-//subscribe to the queue
+    @Value("${aws.queueSecret}")
+    private String queueSecret;
+
+
 
     public void startReading( ){
+        AWSCredentials credentials = new BasicAWSCredentials(queueKey, queueSecret);
+        sqs = AmazonSQSClientBuilder.standard().withCredentials(new AWSStaticCredentialsProvider(credentials)).build();
+        client = AmazonDynamoDBClientBuilder.standard()
+                .withEndpointConfiguration(
+                        new AwsClientBuilder.EndpointConfiguration(System.getenv("dynamoURL"), "us-east-1")
+                ).build();
+        ListTablesResult result = client.listTables();
         try {
             while(true) {
-                List<Message> messages = sqs.receiveMessage(System.getenv("queueUrl")).getMessages();
+                String queueUrl = System.getenv("queueURL");
+                List<Message> messages = sqs.receiveMessage(queueUrl).getMessages();
                 if(messages!=null && !messages.isEmpty()){
                     messages.stream()
-                            .forEach(m -> m.getBody());
+                            .forEach(m ->{
+                                logger.info("processing " + m);
+                                HashMap<String, AttributeValue> value = new HashMap<String, AttributeValue>();
+                                WeatherDay day =  new Gson().fromJson(m.getBody(),WeatherDay.class);
+                                value.put("recommendation",new AttributeValue(day.conditions) );
+                                value.put("high", new AttributeValue(day.high.toString()));
+                                try {
+                                    client.putItem("WalkWeather", value);
+                                } catch (Exception e) {
+                                    logger.error("error writing to table " + e.getMessage());
+                                    e.printStackTrace();
+                                }
+                            });
                 }
                 Thread.sleep(500);
             }
         } catch (InterruptedException e) {
-            e.printStackTrace();
+            logger.error(e.getMessage());
         }
 
     }
